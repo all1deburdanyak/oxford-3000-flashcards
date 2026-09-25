@@ -26,9 +26,10 @@
             padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) 20px; 
         }
         
-        .top-bar { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; height: 40px; flex-shrink: 0; }
-        .top-btn { background-color: rgba(255, 255, 255, 0.2); color: #FFFFFF; border: none; border-radius: 10px; padding: 8px 15px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: none; flex: none; margin-right: 10px;}
+        .top-bar { display: flex; justify-content: flex-start; align-items: center; gap: 8px; margin-bottom: 15px; height: 40px; flex-shrink: 0; }
+        .top-btn { background-color: rgba(255, 255, 255, 0.2); color: #FFFFFF; border: none; border-radius: 10px; padding: 8px 11px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: none; flex: none; }
         .top-btn.reset-btn { background-color: #C65C47; }
+        .top-btn.backup-btn { background-color: #174A6A; }
         
         .card-container { flex-grow: 1; margin-bottom: 20px; perspective: 1000px; min-height: 0; display: flex; }
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
@@ -162,6 +163,9 @@
     <div class="app-container" id="main-view">
         <div class="top-bar">
             <button class="top-btn" onclick="showLearnedView()">Öğrendiklerim</button>
+            <button class="top-btn backup-btn" type="button" onclick="downloadBackup()">Yedekle</button>
+            <button class="top-btn backup-btn" type="button" onclick="chooseBackupFile()">Geri Yükle</button>
+            <input id="backup-file-input" type="file" accept=".json,application/json" onchange="restoreBackup(event)" hidden>
         </div>
         
         <div class="card-container" id="flashcard" onclick="flipCard(event)">
@@ -565,6 +569,123 @@
             }
             localStorage.setItem('flashcard_current_index', currentIndex);
             localStorage.setItem('flashcard_learned_words', JSON.stringify(learnedWords));
+        }
+
+        function createBackupData() {
+            persistCurrentState();
+            return {
+                app: 'oxford-3000-flashcards',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                currentIndex,
+                learnedWords: [...learnedWords],
+                cardNotes: { ...cardNotes }
+            };
+        }
+
+        function backupFileName() {
+            const date = new Date().toISOString().slice(0, 10);
+            return `oxford-kartlar-yedek-${date}.json`;
+        }
+
+        function saveBackupWithDownload(file, fileName) {
+            const url = URL.createObjectURL(file);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        async function downloadBackup() {
+            if (navigator.storage && navigator.storage.persist) {
+                try { await navigator.storage.persist(); } catch (error) {}
+            }
+
+            const fileName = backupFileName();
+            const backupJson = JSON.stringify(createBackupData(), null, 2);
+            const file = new File([backupJson], fileName, { type: 'application/json' });
+
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'İngilizce Flash Kartlar Yedeği'
+                    });
+                    return;
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
+                }
+            }
+
+            saveBackupWithDownload(file, fileName);
+            alert('Yedek dosyası indirildi. Dosyalar uygulamasında güvenli bir yerde sakla.');
+        }
+
+        function chooseBackupFile() {
+            persistCurrentState();
+            const input = document.getElementById('backup-file-input');
+            input.value = '';
+            input.click();
+        }
+
+        function cleanBackupData(data) {
+            if (!data || data.app !== 'oxford-3000-flashcards' || data.version !== 1) {
+                throw new Error('Bu dosya geçerli bir Oxford kartları yedeği değil.');
+            }
+
+            const validIds = new Set(words.map(word => word.id));
+            const cleanNotes = {};
+            if (data.cardNotes && typeof data.cardNotes === 'object' && !Array.isArray(data.cardNotes)) {
+                Object.entries(data.cardNotes).forEach(([key, value]) => {
+                    const id = Number(key);
+                    if (validIds.has(id) && typeof value === 'string' && value.trim()) {
+                        cleanNotes[String(id)] = value;
+                    }
+                });
+            }
+
+            const cleanLearned = Array.isArray(data.learnedWords)
+                ? [...new Set(data.learnedWords.map(Number).filter(id => validIds.has(id)))]
+                : [];
+            const cleanIndex = Number.isInteger(data.currentIndex) && data.currentIndex >= 0 && data.currentIndex < words.length
+                ? data.currentIndex
+                : currentIndex;
+
+            return { cleanNotes, cleanLearned, cleanIndex };
+        }
+
+        async function restoreBackup(event) {
+            const input = event.target;
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            try {
+                const data = JSON.parse(await file.text());
+                const { cleanNotes, cleanLearned, cleanIndex } = cleanBackupData(data);
+                const noteCount = Object.keys(cleanNotes).length;
+                const approved = confirm(
+                    `Yedekte ${noteCount} kart notu ve ${cleanLearned.length} öğrenilmiş kelime bulundu.\n\n` +
+                    'Mevcut kayıtların korunacak ve yedekle birleştirilecek. Devam edilsin mi?'
+                );
+                if (!approved) return;
+
+                cardNotes = { ...cleanNotes, ...cardNotes };
+                learnedWords = [...new Set([...learnedWords, ...cleanLearned])];
+                currentIndex = cleanIndex;
+                persistCardNotes();
+                localStorage.setItem('flashcard_learned_words', JSON.stringify(learnedWords));
+                localStorage.setItem('flashcard_current_index', currentIndex);
+                updateUI();
+                renderLearnedList();
+                alert(`${noteCount} kart notu ve ${cleanLearned.length} öğrenilmiş kelime yedekten geri yüklendi.`);
+            } catch (error) {
+                alert(error.message || 'Yedek dosyası okunamadı.');
+            } finally {
+                input.value = '';
+            }
         }
 
         window.addEventListener('pagehide', persistCurrentState);
