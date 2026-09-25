@@ -48,6 +48,8 @@
         .pronunciation { color: #174A6A; font-size: 22px; font-weight: 400; margin-bottom: 10px; }
         .sentence { color: #C65C47; font-size: 18px; font-weight: 600; line-height: 1.3; }
         .highlight { color: #174A6A; font-weight: 700; }
+        .word-type { margin-top: 10px; padding: 5px 10px; border-radius: 999px; background-color: #F0F2F5; color: #5F6B7A; font-size: 12px; font-weight: 700; line-height: 1.2; }
+        .word-type strong { color: #174A6A; }
 
         .tr-word { color: #174A6A; font-size: 34px; font-weight: 700; margin-bottom: 20px; }
         .tr-sentence { color: #C65C47; font-size: 18px; font-weight: 600; line-height: 1.4; }
@@ -182,6 +184,7 @@
                         <div class="sentence" id="sentence">Cümle</div>
                         <button class="speak-btn small" onclick="speakText(words[currentIndex].sentence.replace(/<[^>]*>?/gm, ''), event)">🔊</button>
                     </div>
+                    <div class="word-type" id="word-type"><strong>Kelime türü:</strong> İsim</div>
 
                     <div class="notes-section" onclick="event.stopPropagation()">
                         <div class="notes-header">
@@ -315,6 +318,109 @@
             { id: 99, word: "Boot", pronunciation: "(buut)", sentence: "Put on your <span class='highlight'>boot</span>.", tr_word: "Bot / Çizme", tr_sentence: "Botunu giy." },
             { id: 100, word: "Boss", pronunciation: "(bos)", sentence: "He is my <span class='highlight'>boss</span>.", tr_word: "Patron", tr_sentence: "O benim patronum." }
         ];
+
+        const wordTypes = {
+            1: 'İsim',
+            2: 'Sıfat',
+            3: 'Edat / Zarf',
+            4: 'Edat / Zarf',
+            5: 'Fiil',
+            6: 'İsim',
+            7: 'İsim',
+            8: 'Sıfat',
+            9: 'İsim',
+            10: 'Fiil',
+            11: 'Fiil',
+            12: 'İsim / Sıfat',
+            13: 'İsim',
+            14: 'Sıfat',
+            15: 'Edat / Bağlaç / Zarf',
+            16: 'İsim',
+            17: 'Zarf',
+            18: 'İsim / Fiil',
+            19: 'Zarf',
+            20: 'Fiil',
+            21: 'İsim',
+            22: 'İsim',
+            23: 'Belirleyici / Zamir / Zarf',
+            24: 'Fiil',
+            25: 'Zarf',
+            26: 'Sıfat / Zarf',
+            27: 'Edat / Zarf',
+            28: 'Zarf',
+            29: 'Zarf',
+            30: 'Zarf',
+            31: 'İsim / Fiil',
+            32: 'Sıfat',
+            33: 'İsim',
+            34: 'İsim / Fiil',
+            35: 'Belirleyici / Zamir / Zarf',
+            36: 'Zamir',
+            37: 'Zamir',
+            38: 'Fiil',
+            39: 'İsim',
+            40: 'İsim',
+            41: 'İsim',
+            42: 'Edat / Zarf',
+            43: 'Fiil',
+            44: 'İsim',
+            45: 'İsim',
+            46: 'Edat / Zarf / Bağlaç',
+            47: 'Fiil',
+            48: 'Edat',
+            49: 'İsim / Fiil',
+            50: 'İsim',
+            51: 'İsim',
+            52: 'Zarf',
+            53: 'İsim',
+            54: 'İsim / Zarf / Sıfat / Fiil',
+            55: 'Sıfat',
+            56: 'İsim',
+            57: 'Fiil',
+            58: 'İsim',
+            59: 'İsim',
+            60: 'İsim',
+            61: 'İsim / Fiil',
+            62: 'İsim / Fiil',
+            63: 'Sıfat',
+            64: 'İsim',
+            65: 'Fiil / Yardımcı fiil',
+            66: 'İsim',
+            67: 'İsim / Fiil',
+            68: 'Fiil / İsim',
+            69: 'Sıfat',
+            70: 'Bağlaç',
+            71: 'Fiil',
+            72: 'İsim',
+            73: 'İsim',
+            74: 'Edat / Bağlaç / Zarf',
+            75: 'Fiil',
+            76: 'Edat / Zarf',
+            77: 'Fiil',
+            78: 'İsim',
+            79: 'Zarf / Edat',
+            80: 'Sıfat / Zarf / İsim',
+            81: 'Sıfat / Zarf / İsim',
+            82: 'Edat / Zarf',
+            83: 'Sıfat',
+            84: 'İsim',
+            85: 'İsim / Fiil',
+            86: 'İsim',
+            87: 'İsim',
+            88: 'İsim',
+            89: 'İsim',
+            90: 'Sıfat / İsim',
+            91: 'İsim / Fiil',
+            92: 'İsim',
+            93: 'Sıfat / İsim',
+            94: 'İsim / Fiil',
+            95: 'İsim',
+            96: 'İsim',
+            97: 'İsim',
+            98: 'İsim / Fiil',
+            99: 'İsim',
+            100: 'İsim'
+        };
 
         let currentIndex = parseInt(localStorage.getItem('flashcard_current_index')) || 0;
         let learnedWords = JSON.parse(localStorage.getItem('flashcard_learned_words')) || [];
@@ -480,6 +586,7 @@
                 document.getElementById('word').innerText = "Tebrikler!";
                 document.getElementById('pronunciation').innerText = "";
                 document.getElementById('sentence').innerHTML = "";
+                document.getElementById('word-type').style.display = 'none';
                 return;
             } else {
                 while(learnedWords.includes(words[currentIndex].id)) {
@@ -494,6 +601,8 @@
             document.getElementById('word').innerHTML = currentWord.word;
             document.getElementById('pronunciation').innerHTML = currentWord.pronunciation;
             document.getElementById('sentence').innerHTML = currentWord.sentence;
+            document.getElementById('word-type').style.display = 'block';
+            document.getElementById('word-type').innerHTML = `<strong>Kelime türü:</strong> ${wordTypes[currentWord.id]}`;
             document.getElementById('tr_word').innerHTML = currentWord.tr_word;
             document.getElementById('tr_sentence').innerHTML = currentWord.tr_sentence;
             loadCurrentNote();
