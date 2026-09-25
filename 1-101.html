@@ -140,6 +140,7 @@
         .action-btn:active { transform: scale(0.95); }
         #btn-prev, #btn-next { background-color: #FFFFFF; color: #000000; }
         #btn-learned { background-color: #6FE77D; color: #000000; }
+        .review-mode #btn-learned { background-color: #FFFFFF; color: #C65C47; }
         
         #learned-view { display: none; }
         .list-container { background-color: #FFFFFF; border-radius: 15px; flex-grow: 1; overflow-y: auto; padding: 20px; min-height: 0; }
@@ -162,7 +163,7 @@
 
     <div class="app-container" id="main-view">
         <div class="top-bar">
-            <button class="top-btn" onclick="showLearnedView()">Öğrendiklerim</button>
+            <button class="top-btn" id="learned-toggle-btn" onclick="toggleLearnedView()">Öğrendiklerim</button>
             <button class="top-btn backup-btn" type="button" onclick="downloadBackup()">Yedekle</button>
             <button class="top-btn backup-btn" type="button" onclick="chooseBackupFile()">Geri Yükle</button>
             <input id="backup-file-input" type="file" accept=".json,application/json" onchange="restoreBackup(event)" hidden>
@@ -204,16 +205,9 @@
         
         <div class="button-container">
             <button class="action-btn" id="btn-prev" onclick="prevWord()">Önceki</button>
-            <button class="action-btn" id="btn-learned" onclick="markLearned()">Öğrendim</button>
+            <button class="action-btn" id="btn-learned" onclick="handlePrimaryAction()">Öğrendim</button>
             <button class="action-btn" id="btn-next" onclick="nextWord()">Sonraki</button>
         </div>
-    </div>
-
-    <div class="app-container" id="learned-view">
-        <div class="top-bar">
-            <button class="top-btn" onclick="hideLearnedView()">Geri Dön</button>
-        </div>
-        <div class="list-container" id="learned-list"></div>
     </div>
 
     <script>
@@ -324,6 +318,9 @@
 
         let currentIndex = parseInt(localStorage.getItem('flashcard_current_index')) || 0;
         let learnedWords = JSON.parse(localStorage.getItem('flashcard_learned_words')) || [];
+        let reviewLearnedMode = false;
+        let learnedReviewPosition = 0;
+        let normalIndexBeforeLearned = currentIndex;
         localStorage.removeItem('flashcard_word_drawings_v1');
         localStorage.removeItem('gemini_api_key');
         const notesStorageKey = 'flashcard_card_notes_v1';
@@ -411,7 +408,7 @@
                 deltaX < 0 ? nextWord() : prevWord();
                 actionTaken = true;
             } else if (deltaY <= -55 && verticalDistance > horizontalDistance * 1.15) {
-                markLearned();
+                handlePrimaryAction();
                 actionTaken = true;
             }
 
@@ -470,16 +467,24 @@
 
         function updateUI() {
             document.getElementById('flashcard').classList.remove('flipped');
-            
-            if (learnedWords.length >= words.length) {
+
+            if (reviewLearnedMode) {
+                const reviewIndexes = getLearnedReviewIndexes();
+                if (reviewIndexes.length === 0) {
+                    hideLearnedView();
+                    return;
+                }
+                learnedReviewPosition = Math.max(0, Math.min(learnedReviewPosition, reviewIndexes.length - 1));
+                currentIndex = reviewIndexes[learnedReviewPosition];
+            } else if (learnedWords.length >= words.length) {
                 document.getElementById('word').innerText = "Tebrikler!";
                 document.getElementById('pronunciation').innerText = "";
                 document.getElementById('sentence').innerHTML = "";
                 return;
-            }
-            
-            while(learnedWords.includes(words[currentIndex].id)) {
-                currentIndex = (currentIndex + 1) % words.length;
+            } else {
+                while(learnedWords.includes(words[currentIndex].id)) {
+                    currentIndex = (currentIndex + 1) % words.length;
+                }
             }
             
             const currentWord = words[currentIndex];
@@ -504,12 +509,30 @@
         }
 
         function nextWord() {
+            if (reviewLearnedMode) {
+                const reviewIndexes = getLearnedReviewIndexes();
+                if (!reviewIndexes.length) return hideLearnedView();
+                const activePosition = reviewIndexes.indexOf(currentIndex);
+                learnedReviewPosition = (activePosition + 1) % reviewIndexes.length;
+                currentIndex = reviewIndexes[learnedReviewPosition];
+                updateUI();
+                return;
+            }
             if (learnedWords.length >= words.length) return;
             do { currentIndex = (currentIndex + 1) % words.length; } while (learnedWords.includes(words[currentIndex].id));
             updateUI();
         }
 
         function prevWord() {
+            if (reviewLearnedMode) {
+                const reviewIndexes = getLearnedReviewIndexes();
+                if (!reviewIndexes.length) return hideLearnedView();
+                const activePosition = reviewIndexes.indexOf(currentIndex);
+                learnedReviewPosition = (activePosition - 1 + reviewIndexes.length) % reviewIndexes.length;
+                currentIndex = reviewIndexes[learnedReviewPosition];
+                updateUI();
+                return;
+            }
             if (learnedWords.length >= words.length) return;
             do { currentIndex = (currentIndex - 1 + words.length) % words.length; } while (learnedWords.includes(words[currentIndex].id));
             updateUI();
@@ -525,38 +548,70 @@
             nextWord(); 
         }
 
-        function unlearnWord(id, event) {
-            if(event) event.stopPropagation(); 
-            learnedWords = learnedWords.filter(wordId => wordId !== id);
+        function handlePrimaryAction() {
+            if (reviewLearnedMode) unlearnCurrentWord();
+            else markLearned();
+        }
+
+        function getLearnedReviewIndexes() {
+            return words
+                .map((word, index) => learnedWords.includes(word.id) ? index : -1)
+                .filter(index => index !== -1);
+        }
+
+        function updateModeControls() {
+            document.getElementById('main-view').classList.toggle('review-mode', reviewLearnedMode);
+            document.getElementById('learned-toggle-btn').textContent = reviewLearnedMode ? 'Geri Dön' : 'Öğrendiklerim';
+            document.getElementById('btn-learned').textContent = reviewLearnedMode ? 'Geri Al' : 'Öğrendim';
+        }
+
+        function unlearnCurrentWord() {
+            const currentId = words[currentIndex].id;
+            const oldReviewIndexes = getLearnedReviewIndexes();
+            const removedPosition = oldReviewIndexes.indexOf(currentIndex);
+            learnedWords = learnedWords.filter(wordId => wordId !== currentId);
             localStorage.setItem('flashcard_learned_words', JSON.stringify(learnedWords));
-            currentIndex = id - 1; 
-            renderLearnedList();
+
+            const reviewIndexes = getLearnedReviewIndexes();
+            if (!reviewIndexes.length) {
+                reviewLearnedMode = false;
+                normalIndexBeforeLearned = currentIndex;
+                updateModeControls();
+                updateUI();
+                return;
+            }
+
+            learnedReviewPosition = Math.min(Math.max(removedPosition, 0), reviewIndexes.length - 1);
+            currentIndex = reviewIndexes[learnedReviewPosition];
+            updateUI();
         }
 
         function showLearnedView() {
-            document.getElementById('main-view').style.display = 'none';
-            document.getElementById('learned-view').style.display = 'flex';
-            renderLearnedList();
+            if (!learnedWords.length) {
+                alert('Henüz öğrendiklerine eklediğin bir kelime yok.');
+                return;
+            }
+            persistCurrentState();
+            normalIndexBeforeLearned = currentIndex;
+            reviewLearnedMode = true;
+            const reviewIndexes = getLearnedReviewIndexes();
+            const currentPosition = reviewIndexes.indexOf(currentIndex);
+            learnedReviewPosition = currentPosition >= 0 ? currentPosition : 0;
+            currentIndex = reviewIndexes[learnedReviewPosition];
+            updateModeControls();
+            updateUI();
         }
 
         function hideLearnedView() {
-            document.getElementById('learned-view').style.display = 'none';
-            document.getElementById('main-view').style.display = 'flex';
-            updateUI(); 
+            reviewLearnedMode = false;
+            currentIndex = normalIndexBeforeLearned;
+            updateModeControls();
+            updateUI();
         }
 
-        function renderLearnedList() {
-            const listContainer = document.getElementById('learned-list');
-            listContainer.innerHTML = ''; 
-            if (learnedWords.length === 0) return;
-            words.forEach(w => {
-                if (learnedWords.includes(w.id)) {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'learned-item';
-                    itemDiv.innerHTML = `<div><div class="learned-word">${w.word} <span style="font-weight:400; font-size:14px;">${w.pronunciation}</span></div><div class="learned-tr">${w.tr_word}</div></div><button class="unlearn-btn" onclick="unlearnWord(${w.id}, event)">Geri Al</button>`;
-                    listContainer.appendChild(itemDiv);
-                }
-            });
+        function toggleLearnedView() {
+            if (reviewLearnedMode) hideLearnedView();
+            else showLearnedView();
         }
 
         function persistCurrentState() {
@@ -679,7 +734,6 @@
                 localStorage.setItem('flashcard_learned_words', JSON.stringify(learnedWords));
                 localStorage.setItem('flashcard_current_index', currentIndex);
                 updateUI();
-                renderLearnedList();
                 alert(`${noteCount} kart notu ve ${cleanLearned.length} öğrenilmiş kelime yedekten geri yüklendi.`);
             } catch (error) {
                 alert(error.message || 'Yedek dosyası okunamadı.');
@@ -693,6 +747,7 @@
             if (document.visibilityState === 'hidden') persistCurrentState();
         });
 
+        updateModeControls();
         updateUI();
     </script>
 </body>
