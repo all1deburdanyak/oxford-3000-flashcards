@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>İngilizce Flash Kartlar</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background-color: #656C89; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            height: 100dvh; 
+            overflow: hidden; 
+        }
+        
+        .app-container { 
+            width: 100%; 
+            max-width: 450px; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) 20px; 
+        }
+        
+        .top-bar { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 15px; height: 40px; flex-shrink: 0; }
+        .top-btn { background-color: rgba(255, 255, 255, 0.2); color: #FFFFFF; border: none; border-radius: 10px; padding: 8px 15px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: none; flex: none; margin-right: 10px;}
+        .top-btn.reset-btn { background-color: #C65C47; }
+        
+        .card-container { flex-grow: 1; margin-bottom: 20px; perspective: 1000px; min-height: 0; display: flex; }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
+        .card-container.flipped .card-inner { transform: rotateY(180deg); }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; background-color: #FFFFFF; border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column; align-items: center; padding: 20px; text-align: center; }
+        
+        .card-front { justify-content: flex-start; padding-top: 40px; }
+        .card-back { justify-content: center; transform: rotateY(180deg); }
+        
+        .card-number { position: absolute; top: 15px; left: 15px; font-size: 16px; font-weight: 700; color: #A0AABF; }
+
+        .word-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 5px; }
+        .sentence-container { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; }
+
+        .word { color: #174A6A; font-size: 40px; font-weight: 700; letter-spacing: 1px; }
+        .pronunciation { color: #174A6A; font-size: 22px; font-weight: 400; margin-bottom: 10px; }
+        .sentence { color: #C65C47; font-size: 18px; font-weight: 600; line-height: 1.3; }
+        .highlight { color: #174A6A; font-weight: 700; }
+
+        .tr-word { color: #174A6A; font-size: 34px; font-weight: 700; margin-bottom: 20px; }
+        .tr-sentence { color: #C65C47; font-size: 18px; font-weight: 600; line-height: 1.4; }
+        
+        .speak-btn { background-color: #F0F2F5; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: transform 0.1s, background-color 0.2s; }
+        .speak-btn:active { transform: scale(0.9); background-color: #E0E5EC; }
+        .speak-btn.small { width: 30px; height: 30px; font-size: 14px; }
+
+        .notes-section {
+            width: 100%;
+            margin-top: auto; 
+            background-color: #FFFDF7;
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            height: 45%;
+            max-height: 45%;
+            min-height: 135px;
+            overflow: hidden;
+        }
+
+        .notes-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            color: #174A6A;
+            font-size: 11px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .notes-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .note-status {
+            color: #6B7280;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .note-clear-btn {
+            border: none;
+            background: transparent;
+            color: #C65C47;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .card-note {
+            width: 100%;
+            flex: 1 1 auto;
+            min-height: 0;
+            resize: none;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            border: 1px solid #E5DECC;
+            border-radius: 9px;
+            padding: 11px 12px;
+            color: #263746;
+            font-size: 14px;
+            line-height: 1.55;
+            text-align: left;
+            outline: none;
+            background-color: #FFFFFF;
+            background-image: linear-gradient(#F1EDE4 1px, transparent 1px);
+            background-size: 100% 24px;
+            background-attachment: local;
+        }
+
+        .card-note:focus {
+            border-color: #174A6A;
+            box-shadow: 0 0 0 3px rgba(23, 74, 106, 0.10);
+        }
+
+        .card-note::placeholder { color: #9CA3AF; }
+
+        .button-container { display: flex; justify-content: space-between; gap: 10px; flex-shrink: 0; }
+        .action-btn { border: none; border-radius: 12px; padding: 16px 0; font-size: 15px; font-weight: 700; cursor: pointer; flex: 1; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: transform 0.1s; }
+        .action-btn:active { transform: scale(0.95); }
+        #btn-prev, #btn-next { background-color: #FFFFFF; color: #000000; }
+        #btn-learned { background-color: #6FE77D; color: #000000; }
+        
+        #learned-view { display: none; }
+        .list-container { background-color: #FFFFFF; border-radius: 15px; flex-grow: 1; overflow-y: auto; padding: 20px; min-height: 0; }
+        
+        .learned-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E0E0E0; padding: 12px 0; color: #174A6A; }
+        .learned-item:last-child { border-bottom: none; }
+        .learned-word { font-size: 16px; font-weight: 700; }
+        .learned-tr { font-size: 13px; color: #C65C47; margin-top: 4px; }
+        .unlearn-btn { background-color: #C65C47; color: #FFFFFF; border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; transition: transform 0.1s; }
+
+        @media (max-height: 700px) {
+            .card-front { padding-top: 32px; }
+            .word { font-size: 34px; }
+            .pronunciation { margin-bottom: 4px; }
+            .sentence-container { margin-top: 4px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="main-view">
+        <div class="top-bar">
+            <button class="top-btn" onclick="showLearnedView()">Öğrendiklerim</button>
+        </div>
+        
+        <div class="card-container" id="flashcard" onclick="flipCard(event)">
+            <div class="card-inner" id="card-inner">
+                <div class="card-front">
+                    <div class="card-number" id="card-number-front">1</div>
+                    <div class="word-container">
+                        <div class="word" id="word">Word</div>
+                        <button class="speak-btn" onclick="speakText(words[currentIndex].word, event)">🔊</button>
+                    </div>
+                    <div class="pronunciation" id="pronunciation">(okunuş)</div>
+                    <div class="sentence-container">
+                        <div class="sentence" id="sentence">Cümle</div>
+                        <button class="speak-btn small" onclick="speakText(words[currentIndex].sentence.replace(/<[^>]*>?/gm, ''), event)">🔊</button>
+                    </div>
+
+                    <div class="notes-section" onclick="event.stopPropagation()">
+                        <div class="notes-header">
+                            <span>📝 KART NOTLARIM</span>
+                            <div class="notes-actions">
+                                <span class="note-status" id="note-status"></span>
+                                <button class="note-clear-btn" type="button" onclick="clearCurrentNote(event)">Notu Sil</button>
+                            </div>
+                        </div>
+                        <textarea class="card-note" id="card-note" placeholder="Bu kelimeyle ilgili notunu buraya yaz..." oninput="saveCurrentNote()" spellcheck="true" autocapitalize="sentences"></textarea>
+                    </div>
+                </div>
+                
+                <div class="card-back">
+                    <div class="card-number" id="card-number-back">1</div>
+                    <div class="tr-word" id="tr_word">Kelime Türkçe</div>
+                    <div class="tr-sentence" id="tr_sentence">Cümle Türkçe</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="button-container">
+            <button class="action-btn" id="btn-prev" onclick="prevWord()">Önceki</button>
+            <button class="action-btn" id="btn-learned" onclick="markLearned()">Öğrendim</button>
+            <button class="action-btn" id="btn-next" onclick="nextWord()">Sonraki</button>
+        </div>
+    </div>
+
+    <div class="app-container" id="learned-view">
+        <div class="top-bar">
+            <button class="top-btn" onclick="hideLearnedView()">Geri Dön</button>
+        </div>
+        <div class="list-container" id="learned-list"></div>
+    </div>
+
+    <script>
+        window.speechSynthesis.getVoices();
+
+        const words = [
+            { id: 1, word: "Ability", pronunciation: "(ebiliti)", sentence: "He has the <span class='highlight'>ability</span> to swim.", tr_word: "Yetenek", tr_sentence: "Onun yüzme yeteneği var." },
+            { id: 2, word: "Able", pronunciation: "(eybıl)", sentence: "I am <span class='highlight'>able</span> to do this.", tr_word: "Yapabilmek", tr_sentence: "Bunu yapabilirim." },
+            { id: 3, word: "About", pronunciation: "(ebaut)", sentence: "We talk <span class='highlight'>about</span> the game.", tr_word: "Hakkında", tr_sentence: "Oyun hakkında konuşuyoruz." },
+            { id: 4, word: "Above", pronunciation: "(ebov)", sentence: "The clock is <span class='highlight'>above</span> the table.", tr_word: "Üzerinde", tr_sentence: "Saat masanın üzerinde." },
+            { id: 5, word: "Accept", pronunciation: "(eksept)", sentence: "I <span class='highlight'>accept</span> the gift.", tr_word: "Kabul etmek", tr_sentence: "Hediyeyi kabul ediyorum." },
+            { id: 6, word: "Accident", pronunciation: "(eksidınt)", sentence: "I saw an <span class='highlight'>accident</span>.", tr_word: "Kaza", tr_sentence: "Bir kaza gördüm." },
+            { id: 7, word: "Action", pronunciation: "(ekşın)", sentence: "We need <span class='highlight'>action</span> now.", tr_word: "Eylem / Hareket", tr_sentence: "Şimdi eyleme ihtiyacımız var." },
+            { id: 8, word: "Active", pronunciation: "(ektiv)", sentence: "She is very <span class='highlight'>active</span>.", tr_word: "Aktif", tr_sentence: "O çok aktif." },
+            { id: 9, word: "Actor", pronunciation: "(ektır)", sentence: "He is a good <span class='highlight'>actor</span>.", tr_word: "Aktör", tr_sentence: "O iyi bir aktör." },
+            { id: 10, word: "Add", pronunciation: "(ed)", sentence: "Please <span class='highlight'>add</span> some sugar.", tr_word: "Eklemek", tr_sentence: "Lütfen biraz şeker ekle." },
+            { id: 11, word: "Admit", pronunciation: "(edmit)", sentence: "I <span class='highlight'>admit</span> my mistake.", tr_word: "İtiraf etmek", tr_sentence: "Hatamı itiraf ediyorum." },
+            { id: 12, word: "Adult", pronunciation: "(edalt)", sentence: "He is an <span class='highlight'>adult</span>.", tr_word: "Yetişkin", tr_sentence: "O bir yetişkin." },
+            { id: 13, word: "Advice", pronunciation: "(edvays)", sentence: "I need your <span class='highlight'>advice</span>.", tr_word: "Tavsiye", tr_sentence: "Senin tavsiyene ihtiyacım var." },
+            { id: 14, word: "Afraid", pronunciation: "(efreyd)", sentence: "I am not <span class='highlight'>afraid</span>.", tr_word: "Korkmuş", tr_sentence: "Korkmuyorum." },
+            { id: 15, word: "After", pronunciation: "(aftır)", sentence: "See you <span class='highlight'>after</span> school.", tr_word: "Sonra", tr_sentence: "Okuldan sonra görüşürüz." },
+            { id: 16, word: "Afternoon", pronunciation: "(aftırnuun)", sentence: "Good <span class='highlight'>afternoon</span>!", tr_word: "Öğleden sonra", tr_sentence: "İyi öğleden sonraları (Tünaydın)!" },
+            { id: 17, word: "Again", pronunciation: "(egeyn)", sentence: "Play it <span class='highlight'>again</span>.", tr_word: "Tekrar", tr_sentence: "Tekrar oyna." },
+            { id: 18, word: "Age", pronunciation: "(eyc)", sentence: "What is your <span class='highlight'>age</span>?", tr_word: "Yaş", tr_sentence: "Yaşın kaç?" },
+            { id: 19, word: "Ago", pronunciation: "(egou)", sentence: "I came two days <span class='highlight'>ago</span>.", tr_word: "Önce", tr_sentence: "İki gün önce geldim." },
+            { id: 20, word: "Agree", pronunciation: "(egrii)", sentence: "I <span class='highlight'>agree</span> with you.", tr_word: "Aynı fikirde olmak", tr_sentence: "Sana katılıyorum." },
+            { id: 21, word: "Air", pronunciation: "(eyır)", sentence: "The <span class='highlight'>air</span> is clean.", tr_word: "Hava", tr_sentence: "Hava temiz." },
+            { id: 22, word: "Airport", pronunciation: "(eyırport)", sentence: "We go to the <span class='highlight'>airport</span>.", tr_word: "Havalimanı", tr_sentence: "Havalimanına gidiyoruz." },
+            { id: 23, word: "All", pronunciation: "(ool)", sentence: "I love <span class='highlight'>all</span> colors.", tr_word: "Hepsi / Bütün", tr_sentence: "Bütün renkleri severim." },
+            { id: 24, word: "Allow", pronunciation: "(elav)", sentence: "They do not <span class='highlight'>allow</span> dogs.", tr_word: "İzin vermek", tr_sentence: "Köpeklere izin vermiyorlar." },
+            { id: 25, word: "Almost", pronunciation: "(olmost)", sentence: "We are <span class='highlight'>almost</span> there.", tr_word: "Neredeyse", tr_sentence: "Neredeyse oradayız." },
+            { id: 26, word: "Alone", pronunciation: "(eloun)", sentence: "I am <span class='highlight'>alone</span> at home.", tr_word: "Yalnız", tr_sentence: "Evde yalnızım." },
+            { id: 27, word: "Along", pronunciation: "(elong)", sentence: "Walk <span class='highlight'>along</span> the road.", tr_word: "Boyunca", tr_sentence: "Yol boyunca yürü." },
+            { id: 28, word: "Already", pronunciation: "(olredi)", sentence: "I <span class='highlight'>already</span> know that.", tr_word: "Zaten / Çoktan", tr_sentence: "Bunu zaten biliyorum." },
+            { id: 29, word: "Also", pronunciation: "(olsou)", sentence: "I <span class='highlight'>also</span> like apples.", tr_word: "Ayrıca / Da, de", tr_sentence: "Ben ayrıca elmaları severim." },
+            { id: 30, word: "Always", pronunciation: "(olveys)", sentence: "I <span class='highlight'>always</span> wake up early.", tr_word: "Her zaman", tr_sentence: "Her zaman erken uyanırım." },
+            { id: 31, word: "Amount", pronunciation: "(emaunt)", sentence: "A small <span class='highlight'>amount</span> of water.", tr_word: "Miktar", tr_sentence: "Küçük bir miktar su." },
+            { id: 32, word: "Angry", pronunciation: "(engri)", sentence: "Why are you <span class='highlight'>angry</span>?", tr_word: "Kızgın", tr_sentence: "Neden kızgınsın?" },
+            { id: 33, word: "Animal", pronunciation: "(enimıl)", sentence: "A cat is an <span class='highlight'>animal</span>.", tr_word: "Hayvan", tr_sentence: "Kedi bir hayvandır." },
+            { id: 34, word: "Answer", pronunciation: "(ensır)", sentence: "What is the <span class='highlight'>answer</span>?", tr_word: "Cevap / Cevaplamak", tr_sentence: "Cevap nedir?" },
+            { id: 35, word: "Any", pronunciation: "(eni)", sentence: "Do you have <span class='highlight'>any</span> money?", tr_word: "Hiç", tr_sentence: "Hiç paran var mı?" },
+            { id: 36, word: "Anyone", pronunciation: "(enivan)", sentence: "Is <span class='highlight'>anyone</span> here?", tr_word: "Kimse", tr_sentence: "Burada kimse var mı?" },
+            { id: 37, word: "Anything", pronunciation: "(enithing)", sentence: "I don't need <span class='highlight'>anything</span>.", tr_word: "Herhangi bir şey", tr_sentence: "Herhangi bir şeye ihtiyacım yok." },
+            { id: 38, word: "Appear", pronunciation: "(epiyır)", sentence: "They <span class='highlight'>appear</span> happy.", tr_word: "Görünmek / Belirmek", tr_sentence: "Mutlu görünüyorlar." },
+            { id: 39, word: "Apple", pronunciation: "(epıl)", sentence: "I eat an <span class='highlight'>apple</span>.", tr_word: "Elma", tr_sentence: "Bir elma yiyorum." },
+            { id: 40, word: "Area", pronunciation: "(eriya)", sentence: "This is a big <span class='highlight'>area</span>.", tr_word: "Alan / Bölge", tr_sentence: "Bu büyük bir alan." },
+            { id: 41, word: "Arm", pronunciation: "(arm)", sentence: "My <span class='highlight'>arm</span> hurts.", tr_word: "Kol", tr_sentence: "Kolum ağrıyor." },
+            { id: 42, word: "Around", pronunciation: "(eraund)", sentence: "Look <span class='highlight'>around</span> you.", tr_word: "Etrafında", tr_sentence: "Etrafına bak." },
+            { id: 43, word: "Arrive", pronunciation: "(erayv)", sentence: "We <span class='highlight'>arrive</span> at work.", tr_word: "Varmak", tr_sentence: "İşe varıyoruz." },
+            { id: 44, word: "Art", pronunciation: "(art)", sentence: "I like modern <span class='highlight'>art</span>.", tr_word: "Sanat", tr_sentence: "Modern sanatı severim." },
+            { id: 45, word: "Artist", pronunciation: "(artist)", sentence: "She is a young <span class='highlight'>artist</span>.", tr_word: "Sanatçı", tr_sentence: "O genç bir sanatçı." },
+            { id: 46, word: "As", pronunciation: "(ez)", sentence: "He works <span class='highlight'>as</span> a driver.", tr_word: "Olarak / Gibi", tr_sentence: "Şoför olarak çalışıyor." },
+            { id: 47, word: "Ask", pronunciation: "(esk)", sentence: "Can I <span class='highlight'>ask</span> a question?", tr_word: "Sormak", tr_sentence: "Bir soru sorabilir miyim?" },
+            { id: 48, word: "At", pronunciation: "(et)", sentence: "I am <span class='highlight'>at</span> home.", tr_word: "-de, -da", tr_sentence: "Evdeyim." },
+            { id: 49, word: "Attack", pronunciation: "(etek)", sentence: "The dog can <span class='highlight'>attack</span>.", tr_word: "Saldırmak", tr_sentence: "Köpek saldırabilir." },
+            { id: 50, word: "Aunt", pronunciation: "(ant)", sentence: "She is my <span class='highlight'>aunt</span>.", tr_word: "Teyze / Hala", tr_sentence: "O benim teyzem." },
+            { id: 51, word: "Autumn", pronunciation: "(otım)", sentence: "Leaves fall in <span class='highlight'>autumn</span>.", tr_word: "Sonbahar", tr_sentence: "Sonbaharda yapraklar düşer." },
+            { id: 52, word: "Away", pronunciation: "(evey)", sentence: "Go <span class='highlight'>away</span>!", tr_word: "Uzak", tr_sentence: "Uzaklaş!" },
+            { id: 53, word: "Baby", pronunciation: "(beybi)", sentence: "The <span class='highlight'>baby</span> is sleeping.", tr_word: "Bebek", tr_sentence: "Bebek uyuyor." },
+            { id: 54, word: "Back", pronunciation: "(bek)", sentence: "I will come <span class='highlight'>back</span>.", tr_word: "Geri / Arka", tr_sentence: "Geri geleceğim." },
+            { id: 55, word: "Bad", pronunciation: "(bed)", sentence: "This is a <span class='highlight'>bad</span> idea.", tr_word: "Kötü", tr_sentence: "Bu kötü bir fikir." },
+            { id: 56, word: "Bag", pronunciation: "(beg)", sentence: "My <span class='highlight'>bag</span> is heavy.", tr_word: "Çanta", tr_sentence: "Çantam ağır." },
+            { id: 57, word: "Bake", pronunciation: "(beyk)", sentence: "I <span class='highlight'>bake</span> a cake.", tr_word: "Fırında pişirmek", tr_sentence: "Kek pişiriyorum." },
+            { id: 58, word: "Ball", pronunciation: "(bol)", sentence: "Kick the <span class='highlight'>ball</span>.", tr_word: "Top", tr_sentence: "Topa vur." },
+            { id: 59, word: "Band", pronunciation: "(bend)", sentence: "I love this rock <span class='highlight'>band</span>.", tr_word: "Müzik grubu", tr_sentence: "Bu rock grubunu seviyorum." },
+            { id: 60, word: "Bank", pronunciation: "(benk)", sentence: "I go to the <span class='highlight'>bank</span>.", tr_word: "Banka", tr_sentence: "Bankaya gidiyorum." },
+            { id: 61, word: "Bar", pronunciation: "(bar)", sentence: "We meet at the <span class='highlight'>bar</span>.", tr_word: "Bar", tr_sentence: "Barda buluşuruz." },
+            { id: 62, word: "Base", pronunciation: "(beys)", sentence: "This is the <span class='highlight'>base</span> of the house.", tr_word: "Temel / Taban", tr_sentence: "Bu evin temeli." },
+            { id: 63, word: "Basic", pronunciation: "(beysik)", sentence: "This is a <span class='highlight'>basic</span> rule.", tr_word: "Temel / Basit", tr_sentence: "Bu temel bir kuraldır." },
+            { id: 64, word: "Bath", pronunciation: "(bath)", sentence: "I take a hot <span class='highlight'>bath</span>.", tr_word: "Banyo", tr_sentence: "Sıcak bir banyo yaparım." },
+            { id: 65, word: "Be", pronunciation: "(bi)", sentence: "I want to <span class='highlight'>be</span> happy.", tr_word: "Olmak", tr_sentence: "Mutlu olmak istiyorum." },
+            { id: 66, word: "Beach", pronunciation: "(biyç)", sentence: "Let's go to the <span class='highlight'>beach</span>.", tr_word: "Plaj", tr_sentence: "Plaja gidelim." },
+            { id: 67, word: "Bear", pronunciation: "(beyır)", sentence: "The brown <span class='highlight'>bear</span> is big.", tr_word: "Ayı", tr_sentence: "Boz ayı büyüktür." },
+            { id: 68, word: "Beat", pronunciation: "(biit)", sentence: "We can <span class='highlight'>beat</span> them.", tr_word: "Yenmek / Vurmak", tr_sentence: "Onları yenebiliriz." },
+            { id: 69, word: "Beautiful", pronunciation: "(biyutıfıl)", sentence: "It is a <span class='highlight'>beautiful</span> day.", tr_word: "Güzel", tr_sentence: "Güzel bir gün." },
+            { id: 70, word: "Because", pronunciation: "(bikoz)", sentence: "I eat <span class='highlight'>because</span> I am hungry.", tr_word: "Çünkü", tr_sentence: "Yiyorum çünkü açım." },
+            { id: 71, word: "Become", pronunciation: "(bikam)", sentence: "He wants to <span class='highlight'>become</span> a doctor.", tr_word: "Haline gelmek / Olmak", tr_sentence: "Doktor olmak istiyor." },
+            { id: 72, word: "Bed", pronunciation: "(bed)", sentence: "I go to <span class='highlight'>bed</span>.", tr_word: "Yatak", tr_sentence: "Yatağa gidiyorum." },
+            { id: 73, word: "Bedroom", pronunciation: "(bedruum)", sentence: "This is my <span class='highlight'>bedroom</span>.", tr_word: "Yatak odası", tr_sentence: "Bu benim yatak odam." },
+            { id: 74, word: "Before", pronunciation: "(bifor)", sentence: "Wash your hands <span class='highlight'>before</span> eating.", tr_word: "Önce", tr_sentence: "Yemekten önce ellerini yıka." },
+            { id: 75, word: "Begin", pronunciation: "(bigin)", sentence: "The game will <span class='highlight'>begin</span>.", tr_word: "Başlamak", tr_sentence: "Oyun başlayacak." },
+            { id: 76, word: "Behind", pronunciation: "(bihaynd)", sentence: "Look <span class='highlight'>behind</span> you.", tr_word: "Arkasında", tr_sentence: "Arkana bak." },
+            { id: 77, word: "Believe", pronunciation: "(biliiv)", sentence: "I <span class='highlight'>believe</span> you.", tr_word: "İnanmak", tr_sentence: "Sana inanıyorum." },
+            { id: 78, word: "Bell", pronunciation: "(bel)", sentence: "Ring the <span class='highlight'>bell</span>.", tr_word: "Zil", tr_sentence: "Zili çal." },
+            { id: 79, word: "Below", pronunciation: "(bilov)", sentence: "The temperature is <span class='highlight'>below</span> zero.", tr_word: "Altında", tr_sentence: "Sıcaklık sıfırın altında." },
+            { id: 80, word: "Best", pronunciation: "(best)", sentence: "He is my <span class='highlight'>best</span> friend.", tr_word: "En iyi", tr_sentence: "O benim en iyi arkadaşım." },
+            { id: 81, word: "Better", pronunciation: "(betır)", sentence: "I feel <span class='highlight'>better</span> today.", tr_word: "Daha iyi", tr_sentence: "Bugün daha iyi hissediyorum." },
+            { id: 82, word: "Between", pronunciation: "(bitviin)", sentence: "Come <span class='highlight'>between</span> 2 and 3.", tr_word: "Arasında", tr_sentence: "2 ile 3 arasında gel." },
+            { id: 83, word: "Big", pronunciation: "(big)", sentence: "That is a <span class='highlight'>big</span> car.", tr_word: "Büyük", tr_sentence: "Şu büyük bir araba." },
+            { id: 84, word: "Bike", pronunciation: "(bayk)", sentence: "I ride my <span class='highlight'>bike</span>.", tr_word: "Bisiklet", tr_sentence: "Bisikletimi sürerim." },
+            { id: 85, word: "Bill", pronunciation: "(bil)", sentence: "Pay the <span class='highlight'>bill</span>.", tr_word: "Fatura / Hesap", tr_sentence: "Hesabı öde." },
+            { id: 86, word: "Bird", pronunciation: "(börd)", sentence: "The <span class='highlight'>bird</span> is flying.", tr_word: "Kuş", tr_sentence: "Kuş uçuyor." },
+            { id: 87, word: "Birth", pronunciation: "(börth)", sentence: "What is your date of <span class='highlight'>birth</span>?", tr_word: "Doğum", tr_sentence: "Doğum tarihin nedir?" },
+            { id: 88, word: "Birthday", pronunciation: "(börthdey)", sentence: "Happy <span class='highlight'>birthday</span>!", tr_word: "Doğum günü", tr_sentence: "Doğum günün kutlu olsun!" },
+            { id: 89, word: "Bit", pronunciation: "(bit)", sentence: "I am a <span class='highlight'>bit</span> tired.", tr_word: "Biraz", tr_sentence: "Biraz yorgunum." },
+            { id: 90, word: "Black", pronunciation: "(blek)", sentence: "I have a <span class='highlight'>black</span> shirt.", tr_word: "Siyah", tr_sentence: "Siyah bir gömleğim var." },
+            { id: 91, word: "Block", pronunciation: "(blok)", sentence: "Walk one <span class='highlight'>block</span>.", tr_word: "Bina / Blok", tr_sentence: "Bir blok yürü." },
+            { id: 92, word: "Blood", pronunciation: "(blad)", sentence: "There is some <span class='highlight'>blood</span>.", tr_word: "Kan", tr_sentence: "Biraz kan var." },
+            { id: 93, word: "Blue", pronunciation: "(blu)", sentence: "The sky is <span class='highlight'>blue</span>.", tr_word: "Mavi", tr_sentence: "Gökyüzü mavidir." },
+            { id: 94, word: "Board", pronunciation: "(bord)", sentence: "Look at the <span class='highlight'>board</span>.", tr_word: "Tahta", tr_sentence: "Tahtaya bak." },
+            { id: 95, word: "Boat", pronunciation: "(bout)", sentence: "The <span class='highlight'>boat</span> is on the water.", tr_word: "Tekne", tr_sentence: "Tekne suyun üzerinde." },
+            { id: 96, word: "Body", pronunciation: "(badi)", sentence: "Listen to your <span class='highlight'>body</span>.", tr_word: "Vücut", tr_sentence: "Vücudunu dinle." },
+            { id: 97, word: "Bone", pronunciation: "(boun)", sentence: "The dog has a <span class='highlight'>bone</span>.", tr_word: "Kemik", tr_sentence: "Köpeğin bir kemiği var." },
+            { id: 98, word: "Book", pronunciation: "(buk)", sentence: "Read this <span class='highlight'>book</span>.", tr_word: "Kitap", tr_sentence: "Bu kitabı oku." },
+            { id: 99, word: "Boot", pronunciation: "(buut)", sentence: "Put on your <span class='highlight'>boot</span>.", tr_word: "Bot / Çizme", tr_sentence: "Botunu giy." },
+            { id: 100, word: "Boss", pronunciation: "(bos)", sentence: "He is my <span class='highlight'>boss</span>.", tr_word: "Patron", tr_sentence: "O benim patronum." }
+        ];
+
+        let currentIndex = parseInt(localStorage.getItem('flashcard_current_index')) || 0;
+        let learnedWords = JSON.parse(localStorage.getItem('flashcard_learned_words')) || [];
+        localStorage.removeItem('flashcard_word_drawings_v1');
+        localStorage.removeItem('gemini_api_key');
+        const notesStorageKey = 'flashcard_card_notes_v1';
+        let cardNotes = {};
+        try {
+            cardNotes = JSON.parse(localStorage.getItem(notesStorageKey)) || {};
+        } catch (error) {
+            cardNotes = {};
+        }
+
+        function persistCardNotes() {
+            try {
+                localStorage.setItem(notesStorageKey, JSON.stringify(cardNotes));
+                return true;
+            } catch (error) {
+                console.warn('Kart notu kaydedilemedi:', error);
+                return false;
+            }
+        }
+
+        function loadCurrentNote() {
+            const noteField = document.getElementById('card-note');
+            noteField.value = cardNotes[String(words[currentIndex].id)] || '';
+            document.getElementById('note-status').textContent = noteField.value ? 'Kaydedildi' : '';
+        }
+
+        function saveCurrentNote() {
+            const noteField = document.getElementById('card-note');
+            const key = String(words[currentIndex].id);
+            if (noteField.value) {
+                cardNotes[key] = noteField.value;
+            } else {
+                delete cardNotes[key];
+            }
+            const saved = persistCardNotes();
+            document.getElementById('note-status').textContent = saved ? 'Kaydedildi' : 'Kaydedilemedi';
+        }
+
+        function clearCurrentNote(event) {
+            if (event) event.stopPropagation();
+            const key = String(words[currentIndex].id);
+            if (!cardNotes[key] || !confirm('Bu karta ait not silinsin mi?')) return;
+            delete cardNotes[key];
+            persistCardNotes();
+            loadCurrentNote();
+        }
+
+        const swipeState = {
+            active: false,
+            startX: 0,
+            startY: 0,
+            startedAt: 0
+        };
+        let suppressCardFlip = false;
+
+        function isSwipeBlockedTarget(target) {
+            return Boolean(target.closest('button, input, textarea, .notes-section'));
+        }
+
+        function beginCardSwipe(clientX, clientY, target) {
+            if (isSwipeBlockedTarget(target)) {
+                swipeState.active = false;
+                return;
+            }
+            swipeState.active = true;
+            swipeState.startX = clientX;
+            swipeState.startY = clientY;
+            swipeState.startedAt = Date.now();
+        }
+
+        function finishCardSwipe(clientX, clientY) {
+            if (!swipeState.active) return;
+            swipeState.active = false;
+
+            const deltaX = clientX - swipeState.startX;
+            const deltaY = clientY - swipeState.startY;
+            const horizontalDistance = Math.abs(deltaX);
+            const verticalDistance = Math.abs(deltaY);
+            const elapsed = Date.now() - swipeState.startedAt;
+
+            if (elapsed > 1200) return;
+
+            let actionTaken = false;
+            if (horizontalDistance >= 55 && horizontalDistance > verticalDistance * 1.15) {
+                deltaX < 0 ? nextWord() : prevWord();
+                actionTaken = true;
+            } else if (deltaY <= -55 && verticalDistance > horizontalDistance * 1.15) {
+                markLearned();
+                actionTaken = true;
+            }
+
+            if (actionTaken) {
+                suppressCardFlip = true;
+                window.setTimeout(() => { suppressCardFlip = false; }, 450);
+            }
+        }
+
+        function cancelCardSwipe() {
+            swipeState.active = false;
+        }
+
+        const flashcardElement = document.getElementById('flashcard');
+        flashcardElement.addEventListener('touchstart', event => {
+            if (event.touches.length !== 1) return cancelCardSwipe();
+            const touch = event.touches[0];
+            beginCardSwipe(touch.clientX, touch.clientY, event.target);
+        }, { passive: true });
+        flashcardElement.addEventListener('touchmove', event => {
+            if (!swipeState.active || event.touches.length !== 1) return;
+            const touch = event.touches[0];
+            const distance = Math.hypot(
+                touch.clientX - swipeState.startX,
+                touch.clientY - swipeState.startY
+            );
+            if (distance > 8) event.preventDefault();
+        }, { passive: false });
+        flashcardElement.addEventListener('touchend', event => {
+            if (!swipeState.active || !event.changedTouches.length) return;
+            const touch = event.changedTouches[0];
+            finishCardSwipe(touch.clientX, touch.clientY);
+        }, { passive: true });
+        flashcardElement.addEventListener('touchcancel', cancelCardSwipe, { passive: true });
+        flashcardElement.addEventListener('pointerdown', event => {
+            if (event.pointerType === 'touch' || event.button !== 0) return;
+            beginCardSwipe(event.clientX, event.clientY, event.target);
+        });
+        flashcardElement.addEventListener('pointerup', event => {
+            if (event.pointerType === 'touch') return;
+            finishCardSwipe(event.clientX, event.clientY);
+        });
+        flashcardElement.addEventListener('pointercancel', cancelCardSwipe);
+
+        function speakText(text, event) {
+            if(event) event.stopPropagation(); 
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.85; 
+            const voices = window.speechSynthesis.getVoices();
+            const femaleVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Victoria')));
+            if (femaleVoice) { utterance.voice = femaleVoice; }
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function updateUI() {
+            document.getElementById('flashcard').classList.remove('flipped');
+            
+            if (learnedWords.length >= words.length) {
+                document.getElementById('word').innerText = "Tebrikler!";
+                document.getElementById('pronunciation').innerText = "";
+                document.getElementById('sentence').innerHTML = "";
+                return;
+            }
+            
+            while(learnedWords.includes(words[currentIndex].id)) {
+                currentIndex = (currentIndex + 1) % words.length;
+            }
+            
+            const currentWord = words[currentIndex];
+            
+            document.getElementById('card-number-front').innerText = currentWord.id;
+            document.getElementById('card-number-back').innerText = currentWord.id;
+            document.getElementById('word').innerHTML = currentWord.word;
+            document.getElementById('pronunciation').innerHTML = currentWord.pronunciation;
+            document.getElementById('sentence').innerHTML = currentWord.sentence;
+            document.getElementById('tr_word').innerHTML = currentWord.tr_word;
+            document.getElementById('tr_sentence').innerHTML = currentWord.tr_sentence;
+            loadCurrentNote();
+            
+            localStorage.setItem('flashcard_current_index', currentIndex);
+        }
+
+        function flipCard(event) { 
+            if (suppressCardFlip) return;
+            if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') {
+                document.getElementById('flashcard').classList.toggle('flipped'); 
+            }
+        }
+
+        function nextWord() {
+            if (learnedWords.length >= words.length) return;
+            do { currentIndex = (currentIndex + 1) % words.length; } while (learnedWords.includes(words[currentIndex].id));
+            updateUI();
+        }
+
+        function prevWord() {
+            if (learnedWords.length >= words.length) return;
+            do { currentIndex = (currentIndex - 1 + words.length) % words.length; } while (learnedWords.includes(words[currentIndex].id));
+            updateUI();
+        }
+
+        function markLearned() {
+            if (learnedWords.length >= words.length) return;
+            const currentId = words[currentIndex].id;
+            if (!learnedWords.includes(currentId)) {
+                learnedWords.push(currentId);
+                localStorage.setItem('flashcard_learned_words', JSON.stringify(learnedWords));
+            }
+            nextWord(); 
+        }
+
+        function unlearnWord(id, event) {
+            if(event) event.stopPropagation(); 
+            learnedWords = learnedWords.filter(wordId => wordId !== id);
+            localStorage.setItem('flashcard_learned_words', JSON.stringify(learnedWords));
+            currentIndex = id - 1; 
+            renderLearnedList();
+        }
+
+        function showLearnedView() {
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('learned-view').style.display = 'flex';
+            renderLearnedList();
+        }
+
+        function hideLearnedView() {
+            document.getElementById('learned-view').style.display = 'none';
+            document.getElementById('main-view').style.display = 'flex';
+            updateUI(); 
+        }
+
+        function renderLearnedList() {
+            const listContainer = document.getElementById('learned-list');
+            listContainer.innerHTML = ''; 
+            if (learnedWords.length === 0) return;
+            words.forEach(w => {
+                if (learnedWords.includes(w.id)) {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'learned-item';
+                    itemDiv.innerHTML = `<div><div class="learned-word">${w.word} <span style="font-weight:400; font-size:14px;">${w.pronunciation}</span></div><div class="learned-tr">${w.tr_word}</div></div><button class="unlearn-btn" onclick="unlearnWord(${w.id}, event)">Geri Al</button>`;
+                    listContainer.appendChild(itemDiv);
+                }
+            });
+        }
+
+        function persistCurrentState() {
+            const noteField = document.getElementById('card-note');
+            if (noteField && words[currentIndex]) {
+                const key = String(words[currentIndex].id);
+                if (noteField.value) cardNotes[key] = noteField.value;
+                else delete cardNotes[key];
+                persistCardNotes();
+            }
+            localStorage.setItem('flashcard_current_index', currentIndex);
+            localStorage.setItem('flashcard_learned_words', JSON.stringify(learnedWords));
+        }
+
+        window.addEventListener('pagehide', persistCurrentState);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') persistCurrentState();
+        });
+
+        updateUI();
+    </script>
+</body>
+</html>
